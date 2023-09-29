@@ -22,7 +22,20 @@ class Barrel(BaseModel):
 @router.post("/deliver")
 def post_deliver_barrels(barrels_delivered: list[Barrel]):
     """ """
-    print(barrels_delivered)
+    #Assuming this is atomic, so no barrels are delivered if the total cost of the barrel list is more than current gold
+    with db.engine.begin() as connection:
+        inventory = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
+        inventory = inventory.first()
+        gold = inventory.gold
+        num_red_ml = inventory.num_red_ml
+        for barrel in barrels_delivered:
+            cost = barrel.quantity * barrel.price
+            volume = barrel.quantity * barrel.ml_per_barrel
+            gold -= cost
+            num_red_ml += volume
+        if gold > 0:
+            connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET gold={gold}, num_red_ml={num_red_ml}"))
+
 
     return "OK"
 
@@ -30,11 +43,14 @@ def post_deliver_barrels(barrels_delivered: list[Barrel]):
 @router.post("/plan")
 def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     """ """
-    print(wholesale_catalog)
+    with db.engine.begin() as connection:
+        result = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory"))
+        num_potions = result.first().num_red_potions
+
 
     return [
         {
-            "sku": "SMALL_RED_BARREL",
-            "quantity": 1,
+            "sku": wholesale_catalog[0].sku,
+            "quantity": 1 if (num_potions < 10 and wholesale_catalog[0].quantity > 0) else 0,
         }
     ]

@@ -19,6 +19,19 @@ class PotionInventory(BaseModel):
 def post_deliver_bottles(potions_delivered: list[PotionInventory]):
     """ """
     print(potions_delivered)
+    with db.engine.begin() as connection:
+        inventory = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
+        inventory = inventory.first()
+        red_potions = inventory.num_red_potions
+        red_ml = inventory.num_red_ml
+        for potion in potions_delivered:
+            red_ml_used = 100 * potion.quantity
+            red_ml -= red_ml_used
+            red_potions += potion.quantity
+        if red_ml > 0:
+            connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_red_potions={red_potions}, num_red_ml={red_ml}"))
+
+
 
     return "OK"
 
@@ -34,10 +47,14 @@ def get_bottle_plan():
     # Expressed in integers from 1 to 100 that must sum up to 100.
 
     # Initial logic: bottle all barrels into red potions.
+    with db.engine.begin() as connection:
+        result = connection.execute(sqlalchemy.text("SELECT num_red_ml FROM global_inventory"))
+    num_red_ml_inventory = result.first().num_red_ml
+    num_potions_available = num_red_ml_inventory/100
 
     return [
             {
                 "potion_type": [100, 0, 0, 0],
-                "quantity": 5,
+                "quantity": num_potions_available,
             }
         ]
