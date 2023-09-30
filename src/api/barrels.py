@@ -33,7 +33,7 @@ def post_deliver_barrels(barrels_delivered: list[Barrel]):
             volume = barrel.quantity * barrel.ml_per_barrel
             gold -= cost
             num_red_ml += volume
-        if gold > 0:
+        if gold >= 0:
             connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET gold={gold}, num_red_ml={num_red_ml}"))
 
 
@@ -47,7 +47,9 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
         result = connection.execute(sqlalchemy.text("SELECT num_red_potions, gold FROM global_inventory"))
         num_potions = result.first().num_red_potions
         gold = result.first().gold
-        quantity = 1 if (num_potions < 10 and wholesale_catalog[0].quantity > 0 and gold >= wholesale_catalog[0].price) else 0,
+    quantity = 0
+    if num_potions < 10 and wholesale_catalog[0].quantity > 0 and gold >= wholesale_catalog[0].price:
+        quantity = 1
 
 
     return [

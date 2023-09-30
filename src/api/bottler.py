@@ -28,7 +28,7 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory]):
             red_ml_used = 100 * potion.quantity
             red_ml -= red_ml_used
             red_potions += potion.quantity
-        if red_ml > 0:
+        if red_ml >= 0:
             connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_red_potions={red_potions}, num_red_ml={red_ml}"))
 
 
