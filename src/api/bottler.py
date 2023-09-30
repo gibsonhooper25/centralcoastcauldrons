@@ -50,11 +50,11 @@ def get_bottle_plan():
     with db.engine.begin() as connection:
         result = connection.execute(sqlalchemy.text("SELECT num_red_ml FROM global_inventory"))
     num_red_ml_inventory = result.first().num_red_ml
-    num_potions_available = num_red_ml_inventory/100
+    num_potions_available = num_red_ml_inventory//100
 
     return [
             {
                 "potion_type": [100, 0, 0, 0],
                 "quantity": num_potions_available,
             }
-        ]
+        ] if num_potions_available > 0 else []

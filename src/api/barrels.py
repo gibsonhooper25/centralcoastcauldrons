@@ -44,13 +44,15 @@ def post_deliver_barrels(barrels_delivered: list[Barrel]):
 def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     """ """
     with db.engine.begin() as connection:
-        result = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory"))
+        result = connection.execute(sqlalchemy.text("SELECT num_red_potions, gold FROM global_inventory"))
         num_potions = result.first().num_red_potions
+        gold = result.first().gold
+        quantity = 1 if (num_potions < 10 and wholesale_catalog[0].quantity > 0 and gold >= wholesale_catalog[0].price) else 0,
 
 
     return [
         {
             "sku": wholesale_catalog[0].sku,
-            "quantity": 1 if (num_potions < 10 and wholesale_catalog[0].quantity > 0) else 0,
+            "quantity": quantity
         }
-    ]
+    ] if quantity > 0 else []

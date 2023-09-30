@@ -24,4 +24,4 @@ def get_catalog():
                 "price": 50,
                 "potion_type": [100, 0, 0, 0],
             }
-        ]
+        ] if num_red_potions > 0 else []

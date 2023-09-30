@@ -25,7 +25,7 @@ def create_cart(new_cart: NewCart):
 def get_cart(cart_id: int):
     """ """
 
-    return {}
+    return {cart_id: cart_id}
 
 
 class CartItem(BaseModel):
