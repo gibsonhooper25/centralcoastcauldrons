@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
+
+import src.api.carts
 from src.api import auth
 import sqlalchemy
 from src import database as db
@@ -22,7 +24,7 @@ def reset():
     """
     with db.engine.begin() as connection:
         connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_red_potions={DEFAULT_NUM_RED_POTIONS}, num_red_ml={DEFAULT_NUM_RED_ML}, gold={DEFAULT_GOLD}"))
-    #TODO reset all carts
+    src.api.carts.carts = []
     return "OK"
 
 
