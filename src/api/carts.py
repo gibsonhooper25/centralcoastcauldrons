@@ -80,6 +80,7 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
         num_red_potions = inventory.num_red_potions - num_potions_bought
         if num_red_potions >= 0:
             connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_red_potions={num_red_potions}, gold={gold}"))
+            carts[cart_id] = {}
             return {"success": True}
         else:
             return {"success": False}
