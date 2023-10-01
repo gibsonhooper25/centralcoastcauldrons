@@ -24,8 +24,8 @@ def post_deliver_barrels(barrels_delivered: list[Barrel]):
     """ """
     #Assuming this is atomic, so no barrels are delivered if the total cost of the barrel list is more than current gold
     with db.engine.begin() as connection:
-        inventory = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
-        inventory = inventory.first()
+        result = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
+        inventory = result.first()
         gold = inventory.gold
         num_red_ml = inventory.num_red_ml
         for barrel in barrels_delivered:
@@ -45,8 +45,9 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     """ """
     with db.engine.begin() as connection:
         result = connection.execute(sqlalchemy.text("SELECT num_red_potions, gold FROM global_inventory"))
-        num_potions = result.first().num_red_potions
-        gold = result.first().gold
+        inventory = result.first()
+        num_potions = inventory.num_red_potions
+        gold = inventory.gold
     quantity = 0
     if num_potions < 10 and wholesale_catalog[0].quantity > 0 and gold >= wholesale_catalog[0].price:
         quantity = 1

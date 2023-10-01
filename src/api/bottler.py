@@ -20,8 +20,8 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory]):
     """ """
     print(potions_delivered)
     with db.engine.begin() as connection:
-        inventory = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
-        inventory = inventory.first()
+        result = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
+        inventory = result.first()
         red_potions = inventory.num_red_potions
         red_ml = inventory.num_red_ml
         for potion in potions_delivered:
