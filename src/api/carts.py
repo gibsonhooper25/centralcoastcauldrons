@@ -68,6 +68,8 @@ class CartCheckout(BaseModel):
 def checkout(cart_id: int, cart_checkout: CartCheckout):
     """ """
     cart = carts[cart_id]
+    print(cart)
+    print(cart_checkout.payment)
     num_potions_bought = 0
     gold_paid = 0
     for i in range(cart["num_items"]):

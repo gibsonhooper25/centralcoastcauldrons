@@ -51,18 +51,38 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     """ """
     print(wholesale_catalog)
     with db.engine.begin() as connection:
-        result = connection.execute(sqlalchemy.text("SELECT num_red_potions, gold FROM global_inventory"))
+        result = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
         inventory = result.first()
-        num_potions = inventory.num_red_potions
+        num_potions = inventory.num_red_potions + inventory.num_green_potions + inventory.num_blue_potions
         gold = inventory.gold
-    quantity = 0
-    if num_potions < 10 and wholesale_catalog[0].quantity > 0 and gold >= wholesale_catalog[0].price:
-        quantity = 1
+    catalog_quantities = []
+    return_plan = []
+    for barrel in wholesale_catalog:
+        catalog_quantities.append(barrel.quantity)
+        return_plan.append({"sku": barrel.sku, "quantity": 0})
+    print(catalog_quantities)
+    barrel_index = 0
 
+    if num_potions < 10:
+        #iterate through catalog repeatedly, adding one of each item until we're out of gold
+        while gold >= 0:
+            if catalog_quantities[barrel_index] > 0:
+                #there's still some available to add to our plan from the catalog
+                gold -= wholesale_catalog[barrel_index].price
+                catalog_quantities[barrel_index] -= 1
+                return_plan[barrel_index]["quantity"] += 1
+            #wrap around
+            barrel_index += 1
+            if barrel_index == len(wholesale_catalog):
+                barrel_index = 0
 
-    return [
-        {
-            "sku": wholesale_catalog[0].sku,
-            "quantity": quantity
-        }
-    ] if quantity > 0 else []
+        #remove the last single item added to our plan so that we have positive gold
+        return_plan[barrel_index-1]["quantity"] -= 1
+
+    else: #don't buy anything if we have more than 10 total potions in our catalog
+        return []
+    print(return_plan)
+    for barrel in return_plan:
+        if barrel["quantity"] == 0:
+            return_plan.remove(barrel)
+    return return_plan
