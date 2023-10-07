@@ -12,8 +12,8 @@ router = APIRouter(
     dependencies=[Depends(auth.get_api_key)],
 )
 
-DEFAULT_NUM_RED_POTIONS = 0
-DEFAULT_NUM_RED_ML = 0
+DEFAULT_NUM_POTIONS = 0
+DEFAULT_NUM_ML = 0
 DEFAULT_GOLD = 100
 
 @router.post("/reset")
@@ -22,8 +22,17 @@ def reset():
     Reset the game state. Gold goes to 100, all potions are removed from
     inventory, and all barrels are removed from inventory. Carts are all reset.
     """
+    sql = "UPDATE global_inventory " \
+          f"SET num_red_potions={DEFAULT_NUM_POTIONS}," \
+          f"num_green_potions={DEFAULT_NUM_POTIONS}," \
+          f"num_blue_potions={DEFAULT_NUM_POTIONS}," \
+          f"num_red_ml={DEFAULT_NUM_ML}," \
+          f"num_green_ml={DEFAULT_NUM_ML}," \
+          f"num_blue_ml={DEFAULT_NUM_ML}," \
+          f"gold={DEFAULT_GOLD}"
+
     with db.engine.begin() as connection:
-        connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_red_potions={DEFAULT_NUM_RED_POTIONS}, num_red_ml={DEFAULT_NUM_RED_ML}, gold={DEFAULT_GOLD}"))
+        connection.execute(sqlalchemy.text(sql))
     src.api.carts.carts = []
     return "OK"
 
