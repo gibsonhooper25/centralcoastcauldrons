@@ -19,13 +19,7 @@ class NewCart(BaseModel):
 @router.post("/")
 def create_cart(new_cart: NewCart):
     """ """
-    cart = {
-        "customer": new_cart.customer,
-        "items": [],
-        "quantities": [],
-        "prices": [],
-        "num_items": 0
-    }
+    cart = []
     carts.append(cart)
     return {"cart_id": len(carts) - 1}
 
@@ -45,18 +39,14 @@ class CartItem(BaseModel):
 def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
     """ """
     cart = carts[cart_id]
-    index = -1
-    for i in range(cart["num_items"]):
-        if cart["items"][i] == item_sku:
-            index = i
+    item_already_in_cart = False
+    for i in range(len(cart)):
+        if cart[i]["sku"] == item_sku:
+            cart[i]["quantity"] = cart_item.quantity
+            item_already_in_cart = True
             break
-    if index >= 0:
-        cart["quantities"][index] += cart_item.quantity
-    else:
-        cart["items"].append(item_sku)
-        cart["quantities"].append(cart_item.quantity)
-        cart["prices"].append(50) #hard code price of red potion for now
-        cart["num_items"] += 1
+    if not item_already_in_cart:
+        cart.append({"sku": item_sku, "quantity": cart_item.quantity})
 
     return "OK"
 
@@ -70,19 +60,33 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
     cart = carts[cart_id]
     print(cart)
     print(cart_checkout.payment)
-    num_potions_bought = 0
     gold_paid = 0
-    for i in range(cart["num_items"]):
-        num_potions_bought += cart["quantities"][i]
-        gold_paid += cart["quantities"][i] * cart["prices"][i]
+    red_bought = 0
+    green_bought = 0
+    blue_bought = 0
+    for i in range(len(cart)): #for each item in the cart
+        item = cart[i]
+        quantity = item["quantity"]
+        match item["sku"]:
+            case "RED_POTION_0":
+                red_bought += quantity
+            case "GREEN_POTION_0":
+                green_bought += quantity
+            case "BLUE_POTION_0":
+                blue_bought += quantity
+            case _:
+                return {"success": False}
+        gold_paid += quantity * 50 #hard coded price right not
     with db.engine.begin() as connection:
         result = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
         inventory = result.first()
         gold = inventory.gold + gold_paid
-        num_red_potions = inventory.num_red_potions - num_potions_bought
-        if num_red_potions >= 0:
-            connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_red_potions={num_red_potions}, gold={gold}"))
-            carts[cart_id] = {}
+        num_red_potions = inventory.num_red_potions - red_bought
+        num_green_potions = inventory.num_green_potions - green_bought
+        num_blue_potions = inventory.num_blue_potions - blue_bought
+        if num_red_potions >= 0 and num_green_potions >= 0 and num_blue_potions >= 0:
+            connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_red_potions={num_red_potions}, num_green_potions={num_green_potions}, num_blue_potions={num_blue_potions}, gold={gold}"))
+            carts[cart_id] = []
             return {"success": True}
         else:
             return {"success": False}
