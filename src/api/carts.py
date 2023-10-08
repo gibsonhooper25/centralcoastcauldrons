@@ -39,6 +39,7 @@ class CartItem(BaseModel):
 def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
     """ """
     cart = carts[cart_id]
+    print("SET QUANTITY BEFORE = " + cart)
     item_already_in_cart = False
     for i in range(len(cart)):
         if cart[i]["sku"] == item_sku:
@@ -47,7 +48,7 @@ def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
             break
     if not item_already_in_cart:
         cart.append({"sku": item_sku, "quantity": cart_item.quantity})
-
+    print("SET QUANTITY AFTER = " + carts[cart_id])
     return "OK"
 
 
@@ -58,8 +59,8 @@ class CartCheckout(BaseModel):
 def checkout(cart_id: int, cart_checkout: CartCheckout):
     """ """
     cart = carts[cart_id]
-    print(cart)
-    print(cart_checkout.payment)
+    print("CART = " + cart)
+    print("PAYMENT = " + cart_checkout.payment)
     gold_paid = 0
     red_bought = 0
     green_bought = 0
@@ -84,6 +85,7 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
         num_red_potions = inventory.num_red_potions - red_bought
         num_green_potions = inventory.num_green_potions - green_bought
         num_blue_potions = inventory.num_blue_potions - blue_bought
+        print("red bought = " + red_bought + " green bought = " + green_bought + " blue bought = " + blue_bought + " gold left  = " + gold)
         if num_red_potions >= 0 and num_green_potions >= 0 and num_blue_potions >= 0:
             connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_red_potions={num_red_potions}, num_green_potions={num_green_potions}, num_blue_potions={num_blue_potions}, gold={gold}"))
             carts[cart_id] = []

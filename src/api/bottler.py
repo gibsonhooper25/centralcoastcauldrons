@@ -20,7 +20,7 @@ class PotionInventory(BaseModel):
 @router.post("/deliver")
 def post_deliver_bottles(potions_delivered: list[PotionInventory]):
     """ """
-    print(potions_delivered)
+    print("POTIONS DELIVERED = " + potions_delivered)
     with db.engine.begin() as connection:
         result = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
         inventory = result.first()
@@ -89,4 +89,5 @@ def get_bottle_plan():
     for item in potential_plan:
         if item['quantity'] > 0:
             given_plan.append(item)
+    print("RETURN BOTTLE PLAN = " + given_plan)
     return given_plan
