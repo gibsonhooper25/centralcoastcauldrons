@@ -83,19 +83,10 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
 
     else: #don't buy anything if we have more than 10 total potions in our catalog
         return []
+    final_plan = []
     for barrel in return_plan:
-        if barrel["quantity"] == 0:
-            return_plan.remove(barrel)
+        if barrel["quantity"] > 0:
+            final_plan.append(barrel)
     print("BARRELS RETURN PLAN = ")
-    print(return_plan)
-    return return_plan
-
-# [Barrel(sku='MEDIUM_RED_BARREL', ml_per_barrel=2500, potion_type=[1, 0, 0, 0], price=250, quantity=10),
-#  Barrel(sku='SMALL_RED_BARREL', ml_per_barrel=500, potion_type=[1, 0, 0, 0], price=100, quantity=10),
-#  Barrel(sku='MEDIUM_GREEN_BARREL', ml_per_barrel=2500, potion_type=[0, 1, 0, 0], price=250, quantity=10),
-#  Barrel(sku='SMALL_GREEN_BARREL', ml_per_barrel=500, potion_type=[0, 1, 0, 0], price=100, quantity=10),
-#  Barrel(sku='MEDIUM_BLUE_BARREL', ml_per_barrel=2500, potion_type=[0, 0, 1, 0], price=300, quantity=10),
-#  Barrel(sku='SMALL_BLUE_BARREL', ml_per_barrel=500, potion_type=[0, 0, 1, 0], price=120, quantity=10),
-#  Barrel(sku='MINI_RED_BARREL', ml_per_barrel=200, potion_type=[1, 0, 0, 0], price=60, quantity=1),
-#  Barrel(sku='MINI_GREEN_BARREL', ml_per_barrel=200, potion_type=[0, 1, 0, 0], price=60, quantity=1),
-#  Barrel(sku='MINI_BLUE_BARREL', ml_per_barrel=200, potion_type=[0, 0, 1, 0], price=60, quantity=1)]
+    print(final_plan)
+    return final_plan
