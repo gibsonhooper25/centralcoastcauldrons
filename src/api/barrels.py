@@ -36,7 +36,7 @@ def post_deliver_barrels(barrels_delivered: list[Barrel]):
             cost = barrel.quantity * barrel.price
             red_volume = barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[0]
             green_volume = barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[1]
-            blue_volume = barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[2] // 100
+            blue_volume = barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[2]
             num_red_ml += red_volume
             num_green_ml += green_volume
             num_blue_ml += blue_volume
