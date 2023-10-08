@@ -39,7 +39,8 @@ class CartItem(BaseModel):
 def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
     """ """
     cart = carts[cart_id]
-    print("SET QUANTITY BEFORE = " + cart)
+    print("SET QUANTITY BEFORE = ")
+    print(cart)
     item_already_in_cart = False
     for i in range(len(cart)):
         if cart[i]["sku"] == item_sku:
@@ -48,7 +49,8 @@ def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
             break
     if not item_already_in_cart:
         cart.append({"sku": item_sku, "quantity": cart_item.quantity})
-    print("SET QUANTITY AFTER = " + carts[cart_id])
+    print("SET QUANTITY AFTER = ")
+    print(carts[cart_id])
     return "OK"
 
 
@@ -59,7 +61,8 @@ class CartCheckout(BaseModel):
 def checkout(cart_id: int, cart_checkout: CartCheckout):
     """ """
     cart = carts[cart_id]
-    print("CART = " + cart)
+    print("CART = ")
+    print(cart)
     print("PAYMENT = " + cart_checkout.payment)
     gold_paid = 0
     red_bought = 0

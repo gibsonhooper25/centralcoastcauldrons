@@ -22,7 +22,8 @@ class Barrel(BaseModel):
 @router.post("/deliver")
 def post_deliver_barrels(barrels_delivered: list[Barrel]):
     """ """
-    print("BARRELS DELIVERED = " + barrels_delivered)
+    print("BARRELS DELIVERED = ")
+    print(barrels_delivered)
     #Assuming this is atomic, so no barrels are delivered if the total cost of the barrel list is more than current gold
     with db.engine.begin() as connection:
         result = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
@@ -50,7 +51,8 @@ def post_deliver_barrels(barrels_delivered: list[Barrel]):
 @router.post("/plan")
 def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     """ """
-    print("CATALOG = " + wholesale_catalog)
+    print("CATALOG = ")
+    print(wholesale_catalog)
     with db.engine.begin() as connection:
         result = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
         inventory = result.first()
@@ -84,7 +86,8 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     for barrel in return_plan:
         if barrel["quantity"] == 0:
             return_plan.remove(barrel)
-    print("BARRELS RETURN PLAN = " + return_plan)
+    print("BARRELS RETURN PLAN = ")
+    print(return_plan)
     return return_plan
 
 # [Barrel(sku='MEDIUM_RED_BARREL', ml_per_barrel=2500, potion_type=[1, 0, 0, 0], price=250, quantity=10),
