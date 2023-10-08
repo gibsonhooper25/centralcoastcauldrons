@@ -88,7 +88,6 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
         num_red_potions = inventory.num_red_potions - red_bought
         num_green_potions = inventory.num_green_potions - green_bought
         num_blue_potions = inventory.num_blue_potions - blue_bought
-        print("red bought = " + red_bought + " green bought = " + green_bought + " blue bought = " + blue_bought + " gold left  = " + gold)
         if num_red_potions >= 0 and num_green_potions >= 0 and num_blue_potions >= 0:
             connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_red_potions={num_red_potions}, num_green_potions={num_green_potions}, num_blue_potions={num_blue_potions}, gold={gold}"))
             carts[cart_id] = []
