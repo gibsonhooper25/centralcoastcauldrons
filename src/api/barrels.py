@@ -34,9 +34,9 @@ def post_deliver_barrels(barrels_delivered: list[Barrel]):
         num_blue_ml = inventory.num_blue_ml
         for barrel in barrels_delivered:
             cost = barrel.quantity * barrel.price
-            red_volume = barrel.quantity * barrel.ml_per_barrel * (barrel.potion_type[0]//100) # int division - assuming a barrel can only contain one color
-            green_volume = barrel.quantity * barrel.ml_per_barrel * (barrel.potion_type[1] // 100) #inside parenthesis should return 1 or 0, overall units ml
-            blue_volume = barrel.quantity * barrel.ml_per_barrel * (barrel.potion_type[2] // 100)
+            red_volume = barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[0]
+            green_volume = barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[1]
+            blue_volume = barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[2] // 100
             num_red_ml += red_volume
             num_green_ml += green_volume
             num_blue_ml += blue_volume
