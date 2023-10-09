@@ -49,8 +49,6 @@ def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
             break
     if not item_already_in_cart:
         cart.append({"sku": item_sku, "quantity": cart_item.quantity})
-    print("SET QUANTITY AFTER = ")
-    print(carts[cart_id])
     return "OK"
 
 
@@ -91,6 +89,8 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
         if num_red_potions >= 0 and num_green_potions >= 0 and num_blue_potions >= 0:
             connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_red_potions={num_red_potions}, num_green_potions={num_green_potions}, num_blue_potions={num_blue_potions}, gold={gold}"))
             carts[cart_id] = []
+            print("CHECKOUT SUCCESS")
             return {"success": True}
         else:
+            print("CHECKOUT FAIL")
             return {"success": False}

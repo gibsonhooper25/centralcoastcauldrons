@@ -65,24 +65,19 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
         return_plan.append({"sku": barrel.sku, "quantity": 0})
     barrel_index = 0
 
-    if num_potions < 10:
-        #iterate through catalog repeatedly, adding one of each item until we're out of gold
-        while gold >= 0:
-            if catalog_quantities[barrel_index] > 0:
-                #there's still some available to add to our plan from the catalog
-                gold -= wholesale_catalog[barrel_index].price
-                catalog_quantities[barrel_index] -= 1
-                return_plan[barrel_index]["quantity"] += 1
-            #wrap around
-            barrel_index += 1
-            if barrel_index == len(wholesale_catalog):
-                barrel_index = 0
+    while gold >= 0:
+        if catalog_quantities[barrel_index] > 0:
+            #there's still some available to add to our plan from the catalog
+            gold -= wholesale_catalog[barrel_index].price
+            catalog_quantities[barrel_index] -= 1
+            return_plan[barrel_index]["quantity"] += 1
+        #wrap around
+        barrel_index += 1
+        if barrel_index == len(wholesale_catalog):
+            barrel_index = 0
 
         #remove the last single item added to our plan so that we have positive gold
-        return_plan[barrel_index-1]["quantity"] -= 1
-
-    else: #don't buy anything if we have more than 10 total potions in our catalog
-        return []
+    return_plan[barrel_index-1]["quantity"] -= 1
     final_plan = []
     for barrel in return_plan:
         if barrel["quantity"] > 0:
