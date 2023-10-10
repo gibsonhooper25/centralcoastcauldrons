@@ -78,7 +78,7 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
                 blue_bought += quantity
             case _:
                 return {"success": False}
-        gold_paid += quantity * 50 #hard coded price right not
+        gold_paid += quantity * 25 #hard coded price right not
     with db.engine.begin() as connection:
         result = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
         inventory = result.first()
