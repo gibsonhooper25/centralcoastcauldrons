@@ -39,8 +39,6 @@ class CartItem(BaseModel):
 def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
     """ """
     cart = carts[cart_id]
-    print("SET QUANTITY BEFORE = ")
-    print(cart)
     item_already_in_cart = False
     for i in range(len(cart)):
         if cart[i]["sku"] == item_sku:
@@ -59,9 +57,6 @@ class CartCheckout(BaseModel):
 def checkout(cart_id: int, cart_checkout: CartCheckout):
     """ """
     cart = carts[cart_id]
-    print("CART = ")
-    print(cart)
-    print("PAYMENT = " + cart_checkout.payment)
     gold_paid = 0
     red_bought = 0
     green_bought = 0
@@ -93,6 +88,8 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
             connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET num_red_potions={num_red_potions}, num_green_potions={num_green_potions}, num_blue_potions={num_blue_potions}, gold={gold}"))
             carts[cart_id] = []
             print("CHECKOUT SUCCESS")
+            print("CART = ")
+            print(cart)
             return {"success": True}
         else:
             print("CHECKOUT FAIL")

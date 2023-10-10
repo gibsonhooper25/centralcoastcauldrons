@@ -46,5 +46,7 @@ def get_catalog():
     for item in potential_catalog:
         if item["quantity"] > 0:
             shown_catalog.append(item)
+    print("SHOWN CATALOG = ")
+    print(shown_catalog)
 
     return shown_catalog
