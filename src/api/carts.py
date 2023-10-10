@@ -72,13 +72,16 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
         match item["sku"]:
             case "RED_POTION_0":
                 red_bought += quantity
+                gold_paid += quantity * 50
             case "GREEN_POTION_0":
                 green_bought += quantity
+                gold_paid += quantity * 50
             case "BLUE_POTION_0":
                 blue_bought += quantity
+                gold_paid += quantity * 5
             case _:
                 return {"success": False}
-        gold_paid += quantity * 25 #hard coded price right not
+        #gold_paid += quantity * 25 #hard coded price right not
     with db.engine.begin() as connection:
         result = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
         inventory = result.first()
