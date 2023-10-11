@@ -15,7 +15,6 @@ def get_catalog():
     with db.engine.begin() as connection:
         result = connection.execute(
             sqlalchemy.text("SELECT * FROM potions WHERE quantity > 0"))
-    print(result)
     for potion in result:
         catalog.append({
             "sku": potion.sku,
