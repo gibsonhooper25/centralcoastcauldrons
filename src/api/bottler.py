@@ -24,29 +24,30 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory]):
     print(potions_delivered)
     with db.engine.begin() as connection:
         result = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
-        inventory = result.first()
-        red_potions = inventory.num_red_potions
-        green_potions = inventory.num_green_potions
-        blue_potions = inventory.num_blue_potions
-        red_ml = inventory.num_red_ml
-        green_ml = inventory.num_green_ml
-        blue_ml = inventory.num_blue_ml
-        for potion in potions_delivered:
-            red_ml_used = potion.quantity * potion.potion_type[0]
-            green_ml_used = potion.quantity * potion.potion_type[1]
-            blue_ml_used = potion.quantity * potion.potion_type[2]
-            red_ml -= red_ml_used
-            green_ml -= green_ml_used
-            blue_ml -= blue_ml_used
-            if red_ml_used > green_ml_used and red_ml_used > blue_ml_used:
-                red_potions += potion.quantity
-            elif green_ml_used > blue_ml_used:
-                green_potions += potion.quantity
-            else:
-                blue_potions += potion.quantity
-        if red_ml >= 0 and green_ml >= 0 and blue_ml >= 0:
-            connection.execute(
-                sqlalchemy.text(f"UPDATE global_inventory SET num_red_potions={red_potions}, num_red_ml={red_ml}, num_green_potions={green_potions}, num_green_ml={green_ml}, num_blue_potions={blue_potions}, num_blue_ml={blue_ml}"))
+    raw_inventory = result.first()
+    red_ml = raw_inventory.num_red_ml
+    green_ml = raw_inventory.num_green_ml
+    blue_ml = raw_inventory.num_blue_ml
+    dark_ml = raw_inventory.num_dark_ml
+    red_bottled = 0
+    green_bottled = 0
+    blue_bottled = 0
+    dark_bottled = 0
+    for potion in potions_delivered:
+        with db.engine.begin() as connection:
+            potion_info = connection.execute(sqlalchemy.text(f"SELECT sku, quantity FROM potions WHERE red_ml={potion.potion_type[0]} AND green_ml={potion.potion_type[1]} AND blue_ml={potion.potion_type[2]} AND dark_ml={potion.potion_type[3]}")).first()
+            sku = potion_info.sku
+            quantity = potion_info.quantity
+            total_ml = [i * potion.quantity for i in potion.potion_type]
+            red_bottled += total_ml[0]
+            green_bottled += total_ml[1]
+            blue_bottled += total_ml[2]
+            dark_bottled += total_ml[3]
+            connection.execute(sqlalchemy.text(f"UPDATE potions SET quantity={quantity + potion.quantity} WHERE sku='{sku}'"))
+
+    with db.engine.begin() as connection:
+        connection.execute(
+                sqlalchemy.text(f"UPDATE global_inventory SET num_red_ml={red_ml - red_bottled}, num_green_ml={green_ml - green_bottled}, num_blue_ml={blue_ml - blue_bottled}, num_dark_ml={dark_ml - dark_bottled}"))
 
     return "OK"
 
@@ -69,13 +70,16 @@ def get_bottle_plan():
     red_ml = inventory.num_red_ml
     green_ml = inventory.num_green_ml
     blue_ml = inventory.num_blue_ml
-    red_potions_available = red_ml // 100
+    red_ml_plain = red_ml // 2
+    red_ml_mix = red_ml - red_ml_plain
     green_potions_available = green_ml // 100
-    blue_potions_available = blue_ml // 100
+    blue_ml_plain = blue_ml // 2
+    blue_ml_mix = blue_ml - blue_ml_plain
+    purple_mix_num = min(red_ml_mix, blue_ml_mix) // 50
     potential_plan = [
         {
             "potion_type": [100, 0, 0, 0],
-            "quantity": red_potions_available,
+            "quantity": red_ml_plain // 100,
         },
         {
             "potion_type": [0, 100, 0, 0],
@@ -83,7 +87,11 @@ def get_bottle_plan():
         },
         {
             "potion_type": [0, 0, 100, 0],
-            "quantity": blue_potions_available,
+            "quantity": blue_ml_plain // 100,
+        },
+        {
+            "potion_type": [50, 0, 50, 0],
+            "quantity": purple_mix_num,
         }
     ]
     given_plan = []

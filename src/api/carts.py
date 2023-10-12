@@ -70,6 +70,7 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
         cart_items = connection.execute(sqlalchemy.text(f"SELECT * FROM cart_items WHERE cart_id = {cart_id}"))
         remaining_quantities = []
         for item in cart_items:
+            print("CART ITEM = " + str(item))
             quantity_desired = item.quantity
             quantity_available = connection.execute(sqlalchemy.text(f"SELECT quantity FROM potions WHERE id = {item.item_key}")).first().quantity
             quantity_remaining = quantity_available - quantity_desired
@@ -80,6 +81,7 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
                 })
             else:
                 return {"success": False}
+        print("CART " + str(cart_id) + " PAID " + str(cart.total_price))
         for bought_potion in remaining_quantities:
             connection.execute(sqlalchemy.text(f"UPDATE potions SET quantity = {bought_potion['quantity']} WHERE id = {bought_potion['id']}"))
         current_gold = connection.execute(sqlalchemy.text("SELECT gold FROM global_inventory")).first().gold
