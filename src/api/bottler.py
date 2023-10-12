@@ -97,6 +97,8 @@ def get_bottle_plan():
     given_plan = []
     for item in potential_plan:
         if item['quantity'] > 0:
+            if item['quantity'] > 50:
+                item['quantity'] = 50
             given_plan.append(item)
     print("RETURN BOTTLE PLAN = ")
     print(given_plan)
