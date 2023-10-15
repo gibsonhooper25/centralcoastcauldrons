@@ -65,27 +65,9 @@ class CartCheckout(BaseModel):
 def checkout(cart_id: int, cart_checkout: CartCheckout):
     """ """
     with db.engine.begin() as connection:
-        cart = connection.execute(sqlalchemy.text(f"SELECT * FROM carts WHERE id = {cart_id}"))
-        cart = cart.first()
-        cart_items = connection.execute(sqlalchemy.text(f"SELECT * FROM cart_items WHERE cart_id = {cart_id}"))
-        remaining_quantities = []
-        for item in cart_items:
-            print("CART ITEM = " + str(item))
-            quantity_desired = item.quantity
-            quantity_available = connection.execute(sqlalchemy.text(f"SELECT quantity FROM potions WHERE id = {item.item_key}")).first().quantity
-            quantity_remaining = quantity_available - quantity_desired
-            if quantity_remaining >= 0:
-                remaining_quantities.append({
-                    "id": item.item_key,
-                    "quantity": quantity_remaining
-                })
-            else:
-                return {"success": False}
-        print("CART " + str(cart_id) + " PAID " + str(cart.total_price))
-        for bought_potion in remaining_quantities:
-            connection.execute(sqlalchemy.text(f"UPDATE potions SET quantity = {bought_potion['quantity']} WHERE id = {bought_potion['id']}"))
-        current_gold = connection.execute(sqlalchemy.text("SELECT gold FROM global_inventory")).first().gold
-        connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET gold = {current_gold + cart.total_price}"))
-        connection.execute(sqlalchemy.text(f"DELETE FROM carts WHERE id = {cart.id}"))
+        cart = connection.execute(sqlalchemy.text(f"SELECT * FROM carts WHERE id = {cart_id}")).first()
+        connection.execute(sqlalchemy.text(f"UPDATE potions SET quantity = potions.quantity - cart_items.quantity FROM cart_items WHERE potions.id = cart_items.item_key and cart_items.cart_id = {cart_id}"))
+        connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET gold = global_inventory.gold + {cart.total_price}"))
+        connection.execute(sqlalchemy.text(f"DELETE FROM carts WHERE id = {cart_id}"))
 
         return {"success": True}

@@ -65,41 +65,50 @@ def get_bottle_plan():
 
     # Initial logic: bottle all barrels into red potions.
     with db.engine.begin() as connection:
-        result = connection.execute(sqlalchemy.text("SELECT num_red_ml, num_green_ml, num_blue_ml FROM global_inventory"))
-    inventory = result.first()
-    red_ml = inventory.num_red_ml
-    green_ml = inventory.num_green_ml
-    blue_ml = inventory.num_blue_ml
-    red_ml_plain = red_ml // 2
-    red_ml_mix = red_ml - red_ml_plain
-    green_potions_available = green_ml // 100
-    blue_ml_plain = blue_ml // 2
-    blue_ml_mix = blue_ml - blue_ml_plain
-    purple_mix_num = min(red_ml_mix, blue_ml_mix) // 50
-    potential_plan = [
-        {
-            "potion_type": [100, 0, 0, 0],
-            "quantity": red_ml_plain // 100,
-        },
-        {
-            "potion_type": [0, 100, 0, 0],
-            "quantity": green_potions_available,
-        },
-        {
-            "potion_type": [0, 0, 100, 0],
-            "quantity": blue_ml_plain // 100,
-        },
-        {
-            "potion_type": [50, 0, 50, 0],
-            "quantity": purple_mix_num,
-        }
-    ]
-    given_plan = []
-    for item in potential_plan:
-        if item['quantity'] > 0:
-            if item['quantity'] > 50:
-                item['quantity'] = 50
-            given_plan.append(item)
+        ml_inventory = connection.execute(sqlalchemy.text("SELECT num_red_ml, num_green_ml, num_blue_ml, num_dark_ml FROM global_inventory")).first()
+    red_ml = ml_inventory.num_red_ml
+    green_ml = ml_inventory.num_green_ml
+    blue_ml = ml_inventory.num_blue_ml
+    dark_ml = ml_inventory.num_dark_ml
+    with db.engine.begin() as connection:
+        recipes = connection.execute(sqlalchemy.text("SELECT sku, quantity, red_ml, green_ml, blue_ml, dark_ml FROM potions ORDER BY price desc")).all()
+    first_plan = []
+    total_potions = 0
+    for recipe in recipes:
+        first_plan.append({
+            "potion_type": [recipe.red_ml, recipe.green_ml, recipe.blue_ml, recipe.dark_ml],
+            "quantity": 0,
+        })
+        total_potions += recipe.quantity
+    potion_index = 0
+    consecutive_skips = 0
+    while total_potions <= 300:
+        recipe = recipes[potion_index]
+        if red_ml >= recipe.red_ml and green_ml >= recipe.green_ml and blue_ml >= recipe.blue_ml and dark_ml >= recipe.dark_ml:
+            #can mix
+            red_ml -= recipe.red_ml
+            green_ml -= recipe.green_ml
+            blue_ml -= recipe.blue_ml
+            dark_ml -= recipe.dark_ml
+            first_plan[potion_index]['quantity'] += 1
+            total_potions += 1
+            consecutive_skips = 0
+        else:
+            consecutive_skips += 1
+            if consecutive_skips == len(recipes):
+                #iterated over every recipe without being able to mix one
+                break
+        potion_index += 1
+        if potion_index == len(recipes):
+            potion_index = 0
+    if potion_index > 0:
+        first_plan[potion_index-1]['quantity'] -= 1
+    else:
+        first_plan[len(recipes)-1]['quantity'] -= 1
+    return_plan = []
+    for potion in first_plan:
+        if potion['quantity'] > 0:
+            return_plan.append(potion)
     print("RETURN BOTTLE PLAN = ")
-    print(given_plan)
-    return given_plan
+    print(return_plan)
+    return return_plan

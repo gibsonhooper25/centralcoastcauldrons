@@ -59,26 +59,29 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
         result = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
         inventory = result.first()
         gold = inventory.gold
-    catalog_quantities = []
     return_plan = []
+    catalog_total_quantity = 0
     for barrel in wholesale_catalog:
-        catalog_quantities.append(barrel.quantity)
         return_plan.append({"sku": barrel.sku, "quantity": 0})
+        catalog_total_quantity += barrel.quantity
     barrel_index = 0
-
-    while gold >= 0:
-        if catalog_quantities[barrel_index] > 0:
+    while gold >= 0 and catalog_total_quantity > 0:
+        item = wholesale_catalog[barrel_index]
+        if item.quantity > 0:
             #there's still some available to add to our plan from the catalog
-            gold -= wholesale_catalog[barrel_index].price
-            catalog_quantities[barrel_index] -= 1
-            return_plan[barrel_index]["quantity"] += 1
-        #wrap around
+            gold -= item.price
+            catalog_total_quantity -= 1
+            item.quantity -= 1
+            return_plan[barrel_index]['quantity'] += 1
         barrel_index += 1
         if barrel_index == len(wholesale_catalog):
             barrel_index = 0
-
+    if gold < 0:
         #remove the last single item added to our plan so that we have positive gold
-    return_plan[barrel_index-1]["quantity"] -= 1
+        if barrel_index > 0:
+            return_plan[barrel_index-1]["quantity"] -= 1
+        else:
+            return_plan[len(wholesale_catalog)-1]["quantity"] -= 1
     final_plan = []
     for barrel in return_plan:
         if barrel["quantity"] > 0:

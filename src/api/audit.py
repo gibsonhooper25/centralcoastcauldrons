@@ -21,7 +21,7 @@ def get_inventory():
             num_potions += row.quantity
         raw_inventory = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
         raw_inventory = raw_inventory.first()
-        num_ml = raw_inventory.num_red_ml + raw_inventory.num_green_ml + raw_inventory.num_blue_ml
+        num_ml = raw_inventory.num_red_ml + raw_inventory.num_green_ml + raw_inventory.num_blue_ml + raw_inventory.num_dark_ml
         gold = raw_inventory.gold
     return {"number_of_potions": num_potions, "ml_in_barrels": num_ml, "gold": gold}
 
