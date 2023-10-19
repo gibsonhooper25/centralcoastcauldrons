@@ -22,17 +22,11 @@ def reset():
     Reset the game state. Gold goes to 100, all potions are removed from
     inventory, and all barrels are removed from inventory. Carts are all reset.
     """
-    sql = "UPDATE global_inventory " \
-          f"SET num_red_potions={DEFAULT_NUM_POTIONS}," \
-          f"num_green_potions={DEFAULT_NUM_POTIONS}," \
-          f"num_blue_potions={DEFAULT_NUM_POTIONS}," \
-          f"num_red_ml={DEFAULT_NUM_ML}," \
-          f"num_green_ml={DEFAULT_NUM_ML}," \
-          f"num_blue_ml={DEFAULT_NUM_ML}," \
-          f"gold={DEFAULT_GOLD}"
+
 
     with db.engine.begin() as connection:
-        connection.execute(sqlalchemy.text(sql))
+        connection.execute(sqlalchemy.text(f"UPDATE potions SET quantity = {DEFAULT_NUM_POTIONS}"))
+        connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET gold = {DEFAULT_GOLD}, num_red_ml = {DEFAULT_NUM_ML}, num_green_ml = {DEFAULT_NUM_ML}, num_dark_ml = {DEFAULT_NUM_ML}, num_blue_ml = {DEFAULT_NUM_ML}"))
     src.api.carts.carts = []
     return "OK"
 
