@@ -25,28 +25,20 @@ def post_deliver_barrels(barrels_delivered: list[Barrel]):
     print("BARRELS DELIVERED = ")
     print(barrels_delivered)
     #Assuming this is atomic, so no barrels are delivered if the total cost of the barrel list is more than current gold
+    red_ml = 0
+    green_ml = 0
+    blue_ml = 0
+    dark_ml = 0
+    gold_change = 0
+    for barrel in barrels_delivered:
+        red_ml += barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[0]
+        green_ml += barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[1]
+        blue_ml += barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[2]
+        dark_ml += barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[3]
+        gold_change -= barrel.quantity * barrel.price
     with db.engine.begin() as connection:
-        result = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
-        inventory = result.first()
-        gold = inventory.gold
-        num_red_ml = inventory.num_red_ml
-        num_green_ml = inventory.num_green_ml
-        num_blue_ml = inventory.num_blue_ml
-        num_dark_ml = inventory.num_dark_ml
-        for barrel in barrels_delivered:
-            cost = barrel.quantity * barrel.price
-            red_volume = barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[0]
-            green_volume = barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[1]
-            blue_volume = barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[2]
-            dark_volume = barrel.quantity * barrel.ml_per_barrel * barrel.potion_type[3]
-            num_red_ml += red_volume
-            num_green_ml += green_volume
-            num_blue_ml += blue_volume
-            num_dark_ml += dark_volume
-            gold -= cost
-        if gold >= 0:
-            connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET gold={gold}, num_red_ml={num_red_ml}, num_green_ml={num_green_ml}, num_blue_ml={num_blue_ml}, num_dark_ml={num_dark_ml}"))
-
+        connection.execute(sqlalchemy.text(f"""INSERT INTO inventory_transactions (customer, gold_change, red_ml_change, green_ml_change, blue_ml_change, dark_ml_change) 
+                                           VALUES ('ME', {gold_change}, {red_ml}, {green_ml}, {blue_ml}, {dark_ml})"""))
     return "OK"
 
 # Gets called once a day
@@ -56,32 +48,9 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     print("WHOLESALE CATALOG = ")
     print(wholesale_catalog)
     with db.engine.begin() as connection:
-        result = connection.execute(sqlalchemy.text("SELECT * FROM global_inventory"))
-        inventory = result.first()
-        gold = inventory.gold
-    return_plan = []
-    catalog_total_quantity = 0
-    for barrel in wholesale_catalog:
-        return_plan.append({"sku": barrel.sku, "quantity": 0})
-        catalog_total_quantity += barrel.quantity
-    barrel_index = 0
-    while gold >= 0 and catalog_total_quantity > 0:
-        item = wholesale_catalog[barrel_index]
-        if item.quantity > 0:
-            #there's still some available to add to our plan from the catalog
-            gold -= item.price
-            catalog_total_quantity -= 1
-            item.quantity -= 1
-            return_plan[barrel_index]['quantity'] += 1
-        barrel_index += 1
-        if barrel_index == len(wholesale_catalog):
-            barrel_index = 0
-    if gold < 0:
-        #remove the last single item added to our plan so that we have positive gold
-        if barrel_index > 0:
-            return_plan[barrel_index-1]["quantity"] -= 1
-        else:
-            return_plan[len(wholesale_catalog)-1]["quantity"] -= 1
+        result = connection.execute(sqlalchemy.text("SELECT SUM(gold_change) AS gold, SUM(red_ml_change) AS red, SUM(green_ml_change) AS green, SUM(blue_ml_change) AS blue, SUM(dark_ml_change) AS dark FROM inventory_transactions")).first()
+        inventory = Inventory(gold=result.gold, red_ml=result.red, green_ml=result.green, blue_ml=result.blue, dark_ml=result.dark)
+    return_plan = barrels_optimize(wholesale_catalog, inventory)
     final_plan = []
     for barrel in return_plan:
         if barrel["quantity"] > 0:
@@ -89,3 +58,35 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     print("BARRELS RETURN PLAN = ")
     print(final_plan)
     return final_plan
+
+class Inventory(BaseModel):
+    gold: int
+    red_ml: int
+    green_ml: int
+    blue_ml: int
+    dark_ml: int
+def barrels_optimize(catalog: list[Barrel], inventory: Inventory):
+    plan = []
+    catalog_total_quantity = 0
+    for barrel in catalog:
+        plan.append({"sku": barrel.sku, "quantity": 0})
+        catalog_total_quantity += barrel.quantity
+    barrel_index = 0
+    while inventory.gold >= 0 and catalog_total_quantity > 0:
+        item = catalog[barrel_index]
+        if item.quantity > 0:
+            #there's still some available to add to our plan from the catalog
+            inventory.gold -= item.price
+            catalog_total_quantity -= 1
+            item.quantity -= 1
+            plan[barrel_index]['quantity'] += 1
+        barrel_index += 1
+        if barrel_index == len(catalog):
+            barrel_index = 0
+    if inventory.gold < 0:
+        #remove the last single item added to our plan so that we have positive gold
+        if barrel_index > 0:
+            plan[barrel_index-1]["quantity"] -= 1
+        else:
+            plan[len(catalog)-1]["quantity"] -= 1
+    return plan

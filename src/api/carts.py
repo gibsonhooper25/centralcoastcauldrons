@@ -20,9 +20,8 @@ class NewCart(BaseModel):
 def create_cart(new_cart: NewCart):
     """ """
     with db.engine.begin() as connection:
-        connection.execute(sqlalchemy.text(f"INSERT INTO carts (customer, total_price) VALUES ('{new_cart.customer}', 0)"))
-        cart_id = connection.execute(sqlalchemy.text(f"SELECT id FROM carts WHERE customer = '{new_cart.customer}'")).first().id
-    return {"cart_id": cart_id}
+        cid = connection.execute(sqlalchemy.text(f"INSERT INTO carts (customer, total_price) VALUES ('{new_cart.customer}', 0) RETURNING id")).scalar_one()
+    return {"cart_id": cid}
 
 
 @router.get("/{cart_id}")
@@ -48,14 +47,8 @@ class CartItem(BaseModel):
 def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
     """ """
     with db.engine.begin() as connection:
-        potion = connection.execute(sqlalchemy.text(f"SELECT id, price FROM potions WHERE sku = '{item_sku}'"))
-        potion = potion.first()
-        connection.execute(sqlalchemy.text(f"INSERT INTO cart_items (item_key, quantity, cart_id) VALUES ({potion.id}, {cart_item.quantity}, {cart_id})"))
-        additional_price = cart_item.quantity * potion.price
-        current_price = connection.execute(sqlalchemy.text(f"SELECT total_price FROM carts WHERE id = {cart_id}")).first().total_price
-        new_price = additional_price + current_price
-        connection.execute(sqlalchemy.text(f"UPDATE carts SET total_price = {new_price} WHERE id = {cart_id}"))
-        return "OK"
+        connection.execute(sqlalchemy.text(f"INSERT INTO cart_items (item_key, quantity, cart_id) VALUES (SELECT id FROM potions WHERE sku='{item_sku}' LIMIT 1, {cart_item.quantity}, {cart_id})"))
+    return "OK"
 
 
 class CartCheckout(BaseModel):
@@ -65,9 +58,15 @@ class CartCheckout(BaseModel):
 def checkout(cart_id: int, cart_checkout: CartCheckout):
     """ """
     with db.engine.begin() as connection:
-        cart = connection.execute(sqlalchemy.text(f"SELECT * FROM carts WHERE id = {cart_id}")).first()
-        connection.execute(sqlalchemy.text(f"UPDATE potions SET quantity = potions.quantity - cart_items.quantity FROM cart_items WHERE potions.id = cart_items.item_key and cart_items.cart_id = {cart_id}"))
-        connection.execute(sqlalchemy.text(f"UPDATE global_inventory SET gold = global_inventory.gold + {cart.total_price}"))
+        cart_items = connection.execute(sqlalchemy.text(f"""SELECT * FROM cart_items WHERE cart_items.cart_id={cart_id}"""))
+        total_price = 0
+        for item in cart_items:
+            individual_price = connection.execute(sqlalchemy.text(f"""SELECT price FROM potions WHERE potions.id={item.item_key}""")).scalar_one()
+            total_price += individual_price * item.quantity
+            connection.execute(sqlalchemy.text(f"""INSERT INTO potion_transactions (customer, potion_id, potion_quantity_change)
+                                                VALUES ((SELECT customer FROM carts WHERE carts.id={cart_id} LIMIT 1), {item.item_key}, {-item.quantity})"""))
+        connection.execute(sqlalchemy.text(f"""INSERT INTO inventory_transactions (customer, gold_change)
+                                                VALUES ((SELECT customer FROM carts WHERE carts.id={cart_id} LIMIT 1), {total_price})"""))
         connection.execute(sqlalchemy.text(f"DELETE FROM carts WHERE id = {cart_id}"))
 
         return {"success": True}

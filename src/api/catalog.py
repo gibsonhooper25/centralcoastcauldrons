@@ -14,7 +14,8 @@ def get_catalog():
     # Can return a max of 20 items.
     with db.engine.begin() as connection:
         result = connection.execute(
-            sqlalchemy.text("SELECT * FROM potions WHERE quantity > 0 ORDER BY quantity desc LIMIT 6"))
+            sqlalchemy.text("""SELECT sku, name, SUM(potion_transactions.potion_quantity_change) AS quantity, price, red_ml, green_ml, blue_ml, dark_ml FROM potion_transactions JOIN potions ON potions.id=potion_transactions.potion_id
+                                WHERE quantity > 0  GROUP BY sku, name, quantity, price, red_ml, green_ml, blue_ml, dark_ml ORDER BY quantity desc LIMIT 6"""))
     for potion in result:
         catalog.append({
             "sku": potion.sku,
