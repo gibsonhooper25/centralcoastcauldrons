@@ -10,7 +10,7 @@ router = APIRouter(
     tags=["cart"],
     dependencies=[Depends(auth.get_api_key)],
 )
-
+SEARCH_LIMIT = 5
 class search_sort_options(str, Enum):
     customer_name = "customer_name"
     item_sku = "item_sku"
@@ -53,19 +53,59 @@ def search_orders(
     Your results must be paginated, the max results you can return at any
     time is 5 total line items.
     """
+    metadata_obj = sqlalchemy.MetaData()
+    potions = sqlalchemy.Table("potions", metadata_obj, autoload_with=db.engine)
+    cart_items = sqlalchemy.Table("cart_items", metadata_obj, autoload_with=db.engine)
+    carts = sqlalchemy.Table("carts", metadata_obj, autoload_with=db.engine)
+    if sort_col is search_sort_options.customer_name:
+        order_by = carts.c.customer
+    elif sort_col is search_sort_options.item_sku:
+        order_by = potions.c.sku
+    elif sort_col is search_sort_options.line_item_total:
+        order_by = cart_items.c.quantity * potions.c.price
+    elif sort_col is search_sort_options.timestamp:
+        order_by = cart_items.c.add_to_cart_time
+    else:
+        assert False
 
+    if sort_order is search_sort_order.asc:
+        order_by = sqlalchemy.asc(order_by)
+    elif sort_order is search_sort_order.desc:
+        order_by = sqlalchemy.desc(order_by)
+    else:
+        assert False
+
+    #offset = int(search_page) * SEARCH_LIMIT
+    offset = 0
+    stmt = sqlalchemy.select(cart_items.c.id,
+                             cart_items.c.item_key,
+                             cart_items.c.quantity,
+                             carts.c.customer,
+                             cart_items.c.add_to_cart_time).join(carts, cart_items.c.cart_id == carts.c.id).join(potions, cart_items.c.item_key == potions.c.id).limit(SEARCH_LIMIT).offset(offset).order_by(order_by)
+
+    if customer_name != "":
+        stmt = stmt.where(carts.c.customer.ilike(f"%{customer_name}%"))
+    if potion_sku != "":
+        stmt = stmt.where(potions.c.sku.ilike(f"%{potion_sku}%"))
+
+    with db.engine.begin() as connection:
+        result = connection.execute(stmt)
+        response_results = []
+        for row in result:
+            potion_info = connection.execute(sqlalchemy.text(f"SELECT sku, price FROM potions WHERE id = {row.item_key}")).first()
+            sku = potion_info.sku
+            price = potion_info.price
+            response_results.append({
+                "line_item_id": row.id,
+                "item_sku": sku,
+                "customer_name": row.customer,
+                "line_item_total": price * row.quantity,
+                "timestamp": row.add_to_cart_time
+            })
     return {
         "previous": "",
         "next": "",
-        "results": [
-            {
-                "line_item_id": 1,
-                "item_sku": "1 oblivion potion",
-                "customer_name": "Scaramouche",
-                "line_item_total": 50,
-                "timestamp": "2021-01-01T00:00:00Z",
-            }
-        ],
+        "results": response_results
     }
 
 
@@ -77,7 +117,8 @@ class NewCart(BaseModel):
 def create_cart(new_cart: NewCart):
     """ """
     with db.engine.begin() as connection:
-        cid = connection.execute(sqlalchemy.text(f"INSERT INTO carts (customer, total_price) VALUES ('{new_cart.customer}', 0) RETURNING id")).scalar_one()
+        cid = connection.execute(sqlalchemy.text(
+            f"INSERT INTO carts (customer, total_price, checked_out) VALUES ('{new_cart.customer}', 0, False) RETURNING id")).scalar_one()
     return {"cart_id": cid}
 
 
@@ -104,26 +145,30 @@ class CartItem(BaseModel):
 def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
     """ """
     with db.engine.begin() as connection:
-        connection.execute(sqlalchemy.text(f"INSERT INTO cart_items (item_key, quantity, cart_id) VALUES ((SELECT id FROM potions WHERE sku='{item_sku}' LIMIT 1), {cart_item.quantity}, {cart_id})"))
+        connection.execute(sqlalchemy.text(
+            f"INSERT INTO cart_items (item_key, quantity, cart_id) VALUES ((SELECT id FROM potions WHERE sku='{item_sku}' LIMIT 1), {cart_item.quantity}, {cart_id})"))
     return "OK"
 
 
 class CartCheckout(BaseModel):
     payment: str
 
+
 @router.post("/{cart_id}/checkout")
 def checkout(cart_id: int, cart_checkout: CartCheckout):
     """ """
     with db.engine.begin() as connection:
-        cart_items = connection.execute(sqlalchemy.text(f"""SELECT * FROM cart_items WHERE cart_items.cart_id={cart_id}"""))
+        cart_items = connection.execute(
+            sqlalchemy.text(f"""SELECT * FROM cart_items WHERE cart_items.cart_id={cart_id}"""))
         total_price = 0
         for item in cart_items:
-            individual_price = connection.execute(sqlalchemy.text(f"""SELECT price FROM potions WHERE potions.id={item.item_key}""")).scalar_one()
+            individual_price = connection.execute(
+                sqlalchemy.text(f"""SELECT price FROM potions WHERE potions.id={item.item_key}""")).scalar_one()
             total_price += individual_price * item.quantity
             connection.execute(sqlalchemy.text(f"""INSERT INTO potion_transactions (customer, potion_id, potion_quantity_change)
                                                 VALUES ((SELECT customer FROM carts WHERE carts.id={cart_id} LIMIT 1), {item.item_key}, {-item.quantity})"""))
         connection.execute(sqlalchemy.text(f"""INSERT INTO inventory_transactions (customer, gold_change)
                                                 VALUES ((SELECT customer FROM carts WHERE carts.id={cart_id} LIMIT 1), {total_price})"""))
-        connection.execute(sqlalchemy.text(f"DELETE FROM carts WHERE id = {cart_id}"))
+        connection.execute(sqlalchemy.text(f"UPDATE carts SET checked_out=True WHERE id = {cart_id}"))
 
         return {"success": True}
