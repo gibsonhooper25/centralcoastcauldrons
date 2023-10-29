@@ -75,18 +75,24 @@ def search_orders(
     else:
         assert False
 
-    #offset = int(search_page) * SEARCH_LIMIT
-    offset = 0
+    page_index = 0
+    if search_page != "":
+        page_index = int(search_page)
+    offset = page_index * SEARCH_LIMIT
+
     stmt = sqlalchemy.select(cart_items.c.id,
                              cart_items.c.item_key,
                              cart_items.c.quantity,
                              carts.c.customer,
                              cart_items.c.add_to_cart_time).join(carts, cart_items.c.cart_id == carts.c.id).join(potions, cart_items.c.item_key == potions.c.id).limit(SEARCH_LIMIT).offset(offset).order_by(order_by)
+    num_cart_items_query = sqlalchemy.select(sqlalchemy.func.count()).select_from(cart_items).join(carts, cart_items.c.cart_id == carts.c.id).join(potions, cart_items.c.item_key == potions.c.id)
 
     if customer_name != "":
         stmt = stmt.where(carts.c.customer.ilike(f"%{customer_name}%"))
+        num_cart_items_query = num_cart_items_query.where(carts.c.customer.ilike(f"%{customer_name}%"))
     if potion_sku != "":
         stmt = stmt.where(potions.c.sku.ilike(f"%{potion_sku}%"))
+        num_cart_items_query = num_cart_items_query.where(potions.c.sku.ilike(f"%{potion_sku}%"))
 
     with db.engine.begin() as connection:
         result = connection.execute(stmt)
@@ -102,9 +108,18 @@ def search_orders(
                 "line_item_total": price * row.quantity,
                 "timestamp": row.add_to_cart_time
             })
+        num_cart_items = connection.execute(num_cart_items_query).scalar_one()
+        if page_index == 0:
+            previous_cursor = ""
+        else:
+            previous_cursor = str(page_index - 1)
+        if offset + SEARCH_LIMIT >= num_cart_items:
+            next_cursor = ""
+        else:
+            next_cursor = str(page_index + 1)
     return {
-        "previous": "",
-        "next": "",
+        "previous": previous_cursor,
+        "next": next_cursor,
         "results": response_results
     }
 
