@@ -80,6 +80,7 @@ class MLInventory(BaseModel):
 def bottler_optimize(ml_inventory: MLInventory, potion_inventory: list[PotionInventory]):
     plan = []
     total_potions = 0
+    potion_inventory = sorted(potion_inventory, key=lambda p: (p.potion_type[0], p.potion_type[1]), reverse=True)
     for recipe in potion_inventory:
         plan.append({
             "potion_type": [recipe.potion_type[0], recipe.potion_type[1], recipe.potion_type[2], recipe.potion_type[3]],
@@ -88,7 +89,7 @@ def bottler_optimize(ml_inventory: MLInventory, potion_inventory: list[PotionInv
         total_potions += recipe.quantity
     potion_index = 0
     consecutive_skips = 0
-    while total_potions <= 300:
+    while total_potions < 300 and consecutive_skips < len(potion_inventory):
         recipe = potion_inventory[potion_index]
         if ml_inventory.red >= recipe.potion_type[0] and ml_inventory.green >= recipe.potion_type[1] and ml_inventory.blue >= recipe.potion_type[2] and ml_inventory.dark >= recipe.potion_type[3]:
             # can mix
@@ -101,14 +102,6 @@ def bottler_optimize(ml_inventory: MLInventory, potion_inventory: list[PotionInv
             consecutive_skips = 0
         else:
             consecutive_skips += 1
-            if consecutive_skips == len(potion_inventory):
-                # iterated over every recipe without being able to mix one
-                break
-        potion_index += 1
-        if potion_index == len(potion_inventory):
-            potion_index = 0
-    if potion_index > 0:
-        plan[potion_index - 1]['quantity'] -= 1
-    else:
-        plan[len(potion_inventory) - 1]['quantity'] -= 1
+        potion_index = (potion_index + 1) % len(potion_inventory)
+
     return plan
