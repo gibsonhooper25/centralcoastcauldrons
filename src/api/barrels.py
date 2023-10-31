@@ -68,25 +68,22 @@ class Inventory(BaseModel):
 def barrels_optimize(catalog: list[Barrel], inventory: Inventory):
     plan = []
     catalog_total_quantity = 0
+    consecutive_skips = 0
+    remaining_gold = inventory.gold
+    catalog = sorted(catalog, key=lambda b: b.ml_per_barrel / b.price, reverse=True)
     for barrel in catalog:
         plan.append({"sku": barrel.sku, "quantity": 0})
         catalog_total_quantity += barrel.quantity
     barrel_index = 0
-    while inventory.gold >= 0 and catalog_total_quantity > 0:
+    while consecutive_skips < len(catalog):
         item = catalog[barrel_index]
-        if item.quantity > 0:
+        if item.quantity > 0 and item.price <= remaining_gold:
             #there's still some available to add to our plan from the catalog
-            inventory.gold -= item.price
-            catalog_total_quantity -= 1
+            remaining_gold -= item.price
             item.quantity -= 1
             plan[barrel_index]['quantity'] += 1
-        barrel_index += 1
-        if barrel_index == len(catalog):
-            barrel_index = 0
-    if inventory.gold < 0:
-        #remove the last single item added to our plan so that we have positive gold
-        if barrel_index > 0:
-            plan[barrel_index-1]["quantity"] -= 1
+            consecutive_skips = 0
         else:
-            plan[len(catalog)-1]["quantity"] -= 1
+            consecutive_skips += 1
+        barrel_index = (barrel_index + 1) % len(catalog)
     return plan
